@@ -2,44 +2,48 @@ import { MdOutlineEdit } from "react-icons/md";
 import { RiDeleteBinLine } from "react-icons/ri";
 import { IoEyeOutline } from "react-icons/io5";
 
-
 interface Coord {
-    id: string;
-    label: string;
-    visible: boolean;
-  }
-  
-  interface Annotation {
-    class: string;
-    roi_xyxy: Coord[];
-  }
-  
-  interface Drawing {
-    id: string;
-    label: string;
-    visible: boolean;
-    toothNumber?: string;
-    pathology?: string;
-    customPathology?: string;
-  }
-  
-  interface AnnotationsListProps {
-    annotations: Annotation[];
-    drawings: Drawing[];
-    editingId: string | null;
-    editingDrawing: any;
-    setEditingId: (id: string | null) => void;
-    setEditingDrawing: any ;
-    toggleAnnotationVisibility: (annotationClass: string, id: string) => void;
-    toggleDrawingVisibility: (id: string) => void;
-    handleDelete: (annotationClass: string, id: string) => void;
-    deleteDrawing: (id: string) => void;
-    setDrawings: any;
-    setAnnotations: any;
-    handleKeyPress: (e: React.KeyboardEvent<HTMLInputElement>, annotationClass: string, id: string, label: string) => void;
-  }
+  id: string;
+  label: string;
+  visible: boolean;
+}
 
-const AnnotationsList: React.FC<AnnotationsListProps>  = ({
+interface Annotation {
+  class: string;
+  roi_xyxy: Coord[];
+}
+
+interface Drawing {
+  id: string;
+  label: string;
+  visible: boolean;
+  toothNumber?: string;
+  pathology?: string;
+  customPathology?: string;
+}
+
+interface AnnotationsListProps {
+  annotations: Annotation[];
+  drawings: Drawing[];
+  editingId: string | null;
+  editingDrawing: any;
+  setEditingId: (id: string | null) => void;
+  setEditingDrawing: any;
+  toggleAnnotationVisibility: (annotationClass: string, id: string) => void;
+  toggleDrawingVisibility: (id: string) => void;
+  handleDelete: (annotationClass: string, id: string) => void;
+  deleteDrawing: (id: string) => void;
+  setDrawings: any;
+  setAnnotations: any;
+  handleKeyPress: (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    annotationClass: string,
+    id: string,
+    label: string
+  ) => void;
+}
+
+const AnnotationsList: React.FC<AnnotationsListProps> = ({
   annotations,
   drawings,
   editingId,
@@ -52,7 +56,7 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
   deleteDrawing,
   setDrawings,
   setAnnotations,
-  handleKeyPress
+  handleKeyPress,
 }) => {
   return (
     <div className="h-[700px] border-2 border-[#393838] rounded-md border-dotted text-white p-4 overflow-auto">
@@ -70,11 +74,13 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
                     type="text"
                     value={coord.label}
                     onChange={(e) => {
-                      setAnnotations((prev:any) =>
-                        prev.map((ann:any) => ({
+                      setAnnotations((prev: any) =>
+                        prev.map((ann: any) => ({
                           ...ann,
-                          roi_xyxy: ann.roi_xyxy.map((c:any) =>
-                            c.id === coord.id ? { ...c, label: e.target.value } : c
+                          roi_xyxy: ann.roi_xyxy.map((c: any) =>
+                            c.id === coord.id
+                              ? { ...c, label: e.target.value }
+                              : c
                           ),
                         }))
                       );
@@ -88,8 +94,12 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
                   />
                 ) : (
                   <div className="flex gap-2 text-sm overflow-hidden">
-                    <span className="text-white whitespace-nowrap">{coord.label}</span>
-                    <span className="text-white truncate">{annotation.class}</span>
+                    <span className="text-white whitespace-nowrap">
+                      {coord.label}
+                    </span>
+                    <span className="text-white truncate">
+                      {annotation.class}
+                    </span>
                   </div>
                 )}
               </div>
@@ -98,11 +108,16 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
                   className="cursor-pointer"
                   onClick={() => setEditingId(coord.id)}
                 >
-                  <MdOutlineEdit size={16} className="text-gray-400 hover:text-white" />
+                  <MdOutlineEdit
+                    size={16}
+                    className="text-gray-400 hover:text-white"
+                  />
                 </button>
                 <button
                   className="cursor-pointer"
-                  onClick={() => toggleAnnotationVisibility(annotation.class, coord.id)}
+                  onClick={() =>
+                    toggleAnnotationVisibility(annotation.class, coord.id)
+                  }
                 >
                   <IoEyeOutline
                     size={20}
@@ -125,7 +140,7 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
       {drawings.length > 0 && (
         <div className="mb-4">
           <h3 className="font-bold mb-2">Other Regions</h3>
-          {drawings.map((drawing:any) => (
+          {drawings.map((drawing: any) => (
             <div
               key={drawing.id}
               className="flex bg-[#202020] py-3 px-3 justify-between items-center mb-2"
@@ -137,12 +152,14 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
                     className="w-full bg-[#707070] text-xs text-gray-300 px-2 py-1 rounded"
                     value={drawing.label}
                     onChange={(e) => {
-                      setDrawings((prev:any) => prev.map((d:any) => {
-                        if (d.id === drawing.id) {
-                          return { ...d, label: e.target.value };
-                        }
-                        return d;
-                      }));
+                      setDrawings((prev: any) =>
+                        prev.map((d: any) => {
+                          if (d.id === drawing.id) {
+                            return { ...d, label: e.target.value };
+                          }
+                          return d;
+                        })
+                      );
                     }}
                     onBlur={() => setEditingDrawing(null)}
                     autoFocus
@@ -151,27 +168,47 @@ const AnnotationsList: React.FC<AnnotationsListProps>  = ({
               ) : (
                 <>
                   <div className="max-w-[60%] overflow-hidden">
-                    <span className="text-white text-sm block truncate" title={drawing.label}>
-                      {drawing.label}
-                    </span>
+                    {drawing.label.trim().length > 0 ? (
+                      <span
+                        className="text-white text-sm block truncate"
+                        title={drawing.label}
+                      >
+                        {drawing.label}
+                      </span>
+                    ) : (
+                      <span
+                        className="text-gray-400 text-sm block truncate"
+                        title={drawing.label}
+                      >
+                        ____
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center space-x-3 flex-shrink-0">
                     <button
                       className="cursor-pointer"
-                      onClick={() => setEditingDrawing({
-                        id: drawing.id,
-                        toothNumber: drawing.toothNumber || "1",
-                        pathology: drawing.pathology || "Cavity",
-                        customPathology: drawing.customPathology || ""
-                      })}
+                      onClick={() =>
+                        setEditingDrawing({
+                          id: drawing.id,
+                          toothNumber: drawing.toothNumber || "1",
+                          pathology: drawing.pathology || "Cavity",
+                          customPathology: drawing.customPathology || "",
+                        })
+                      }
                     >
-                      <MdOutlineEdit size={16} className="text-gray-400 hover:text-white" />
+                      <MdOutlineEdit
+                        size={16}
+                        className="text-gray-400 hover:text-white"
+                      />
                     </button>
                     <button
                       className="cursor-pointer"
                       onClick={() => toggleDrawingVisibility(drawing.id)}
                     >
-                      <IoEyeOutline size={20} color={drawing.visible ? "white" : "grey"} />
+                      <IoEyeOutline
+                        size={20}
+                        color={drawing.visible ? "white" : "grey"}
+                      />
                     </button>
                     <button
                       className="cursor-pointer"

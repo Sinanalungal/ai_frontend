@@ -115,7 +115,6 @@ const FileUpload = () => {
   } | null>(null);
 
   const toothNumberOptions = [
-    " ",
     "1",
     "2",
     "3",
@@ -381,7 +380,7 @@ const FileUpload = () => {
       setIsPolygonDrawing(false);
       setCurrentPoints([]);
       setStartPoint(null);
-      drawAnnotations(); // Redraw to clear any temporary drawings
+      drawAnnotations();
       return;
     }
 
@@ -409,12 +408,11 @@ const FileUpload = () => {
         );
 
         if (distance < SNAP_THRESHOLD && currentPoints.length >= 6) {
-          // Save history before completing polygon
           setDrawingHistory((history) => [...history, [...drawings]]);
           const newDrawing: Drawing = {
             type: "polygon",
             points: [...currentPoints],
-            label: `Polygon ${drawings.length + 1}`,
+            label: ``,
             id: `drawing-${Date.now()}`,
             visible: true,
             transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } },
@@ -433,7 +431,7 @@ const FileUpload = () => {
       const newDrawing: Drawing = {
         type: "point",
         points: [x, y],
-        label: `Point ${drawings.length + 1}`,
+        label: ``,
         id: `drawing-${Date.now()}`,
         visible: true,
         transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } },
@@ -751,31 +749,6 @@ const FileUpload = () => {
     setShowSelecting(false);
   };
 
-  // useEffect(() => {
-  //   const handleZoom = () => {
-  //     setZoomLevel(window.devicePixelRatio);
-
-  //     if (timer) {
-  //       clearTimeout(timer);
-  //     }
-
-  //     const newTimer = setTimeout(() => {
-  //       handleUpload();
-  //     }, 2000);
-
-  //     setTimer(newTimer as any);
-  //   };
-
-  //   window.addEventListener("resize", handleZoom);
-
-  //   return () => {
-  //     window.removeEventListener("resize", handleZoom);
-  //     if (timer) {
-  //       clearTimeout(timer);
-  //     }
-  //   };
-  // }, [zoomLevel, timer]);
-
   // Tools
   const tools = [
     {
@@ -926,27 +899,30 @@ const FileUpload = () => {
           scaledY2 - scaledY1
         );
 
-        // Draw API annotation label with number first, then name
-        const label = `${coord.label} ${annotation.class}`; // Changed this line to put number first
-        ctx.font = "14px Arial";
-        const textMetrics = ctx.measureText(label);
-        const textHeight = 20;
+        // Only draw label if it's not empty
+        const label = `${coord.label} ${annotation.class}`.trim();
+        if (label) {
+          ctx.font = "14px Arial";
+          const textMetrics = ctx.measureText(label);
+          const textHeight = 20;
 
-        // Label background
-        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-        ctx.fillRect(
-          scaledX1,
-          scaledY1 - textHeight,
-          textMetrics.width + 10,
-          textHeight
-        );
+          // Label background
+          ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+          ctx.fillRect(
+            scaledX1,
+            scaledY1 - textHeight,
+            textMetrics.width + 10,
+            textHeight
+          );
 
-        // Label text
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+          // Label text
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+        }
       });
     });
 
+    // Draw custom drawings
     drawings.forEach((drawing) => {
       if (!drawing.visible) return;
 
@@ -980,22 +956,32 @@ const FileUpload = () => {
             ctx.stroke();
           }
           break;
+
+        case "point":
+          ctx.arc(drawing.points[0], drawing.points[1], 3, 0, Math.PI * 2);
+          ctx.fill();
+          break;
       }
 
-      // Draw label for drawing
-      if (drawing.visible) {
+      // Only draw label if it's not empty
+      if (drawing.label && drawing.label.trim()) {
         ctx.font = "14px Arial";
-        ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
         const textMetrics = ctx.measureText(drawing.label);
+        const textHeight = 20;
+
+        // Label background
+        ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
         ctx.fillRect(
           drawing.points[0],
-          drawing.points[1] - 20,
+          drawing.points[1] - textHeight,
           textMetrics.width + 10,
-          20
+          textHeight
         );
+
+        // Label text
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText(
-          drawing.label,
+          drawing.label.trim(),
           drawing.points[0] + 5,
           drawing.points[1] - 5
         );

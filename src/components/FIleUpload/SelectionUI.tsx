@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import React, { useState, useEffect } from "react";
+import { X } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from '@/components/ui/input';
+import { Input } from "@/components/ui/input";
 
 interface SelectionUIProps {
   toothNumberOptions: string[];
@@ -39,8 +39,10 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
     }
   }, [selectedTooth, selectedPathology, isReady, handleSelectionSubmit]);
 
-  const handleCustomPathologyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && customPathology.trim()) {
+  const handleCustomPathologyKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Enter" && customPathology.trim()) {
       setIsReady(true);
       handleSelectionSubmit(selectedTooth, selectedPathology, customPathology);
     }
@@ -64,16 +66,16 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
           <label className="text-[11px] font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
             Tooth No.
           </label>
-          <Select
-            value={selectedTooth}
-            onValueChange={setSelectedTooth}
-          >
+          <Select value={selectedTooth} onValueChange={setSelectedTooth}>
             <SelectTrigger className="h-7 text-xs bg-muted/50 min-w-[120px]">
               <SelectValue placeholder="Select tooth" />
             </SelectTrigger>
             <SelectContent>
               <div className="max-h-[200px] overflow-y-auto">
-                {toothNumberOptions.map(num => (
+                <SelectItem key={" "} value={" "} className="text-xs">
+                  None
+                </SelectItem>
+                {toothNumberOptions.map((num) => (
                   <SelectItem key={num} value={num} className="text-xs">
                     {num}
                   </SelectItem>
@@ -100,7 +102,7 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
             </SelectTrigger>
             <SelectContent>
               <div className="max-h-[200px] overflow-y-auto">
-                {pathologyOptions.map(option => (
+                {pathologyOptions.map((option) => (
                   <SelectItem key={option} value={option} className="text-xs">
                     {option}
                   </SelectItem>
@@ -111,11 +113,11 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
         </div>
 
         {selectedPathology === "Other" && (
-          <div className="space-y-1.5 pl-[60px]">
+          <div className="space-y-1.5 text-xs pl-[60px]">
             <Input
               type="text"
-              placeholder="Type and press Enter"
-              className="h-7 text-xs bg-muted/50"
+              // placeholder="Type and press Enter"
+              className="h-7 text-[10px] text-white  bg-muted/50"
               value={customPathology}
               onChange={(e) => setCustomPathology(e.target.value)}
               onKeyDown={handleCustomPathologyKeyDown}
