@@ -51,38 +51,40 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
   };
 
   return (
-    <Card className="w-[180px] relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg shadow-lg border-muted">
+    <Card className="w-[240px] relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg shadow-lg border-muted">
       <button
         onClick={handleClose}
-        className="absolute right-2 top-2 p-1 hover:bg-muted rounded-sm transition-colors"
+        className="absolute -right-1 -top-2 bg-white p-0.5 hover:bg-muted rounded-sm transition-colors"
       >
         <X className="h-3 w-3 text-muted-foreground" />
       </button>
 
-      <div className="p-3 space-y-2">
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-muted-foreground">
+      <div className="p-3 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-[11px] font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
             Tooth No.
           </label>
           <Select
             value={selectedTooth}
             onValueChange={setSelectedTooth}
           >
-            <SelectTrigger className="h-7 text-xs bg-muted/50">
+            <SelectTrigger className="h-7 text-xs bg-muted/50 min-w-[120px]">
               <SelectValue placeholder="Select tooth" />
             </SelectTrigger>
             <SelectContent>
-              {toothNumberOptions.map(num => (
-                <SelectItem key={num} value={num} className="text-xs">
-                  {num}
-                </SelectItem>
-              ))}
+              <div className="max-h-[200px] overflow-y-auto">
+                {toothNumberOptions.map(num => (
+                  <SelectItem key={num} value={num} className="text-xs">
+                    {num}
+                  </SelectItem>
+                ))}
+              </div>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-muted-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-[11px] font-medium text-muted-foreground whitespace-nowrap min-w-[52px]">
             Pathology
           </label>
           <Select
@@ -93,21 +95,23 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
               setIsReady(false);
             }}
           >
-            <SelectTrigger className="h-7 text-xs bg-muted/50">
-              <SelectValue placeholder="Select pathology" />
+            <SelectTrigger className="h-7 text-xs bg-muted/50 min-w-[120px]">
+              <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              {pathologyOptions.map(option => (
-                <SelectItem key={option} value={option} className="text-xs">
-                  {option}
-                </SelectItem>
-              ))}
+              <div className="max-h-[200px] overflow-y-auto">
+                {pathologyOptions.map(option => (
+                  <SelectItem key={option} value={option} className="text-xs">
+                    {option}
+                  </SelectItem>
+                ))}
+              </div>
             </SelectContent>
           </Select>
         </div>
 
         {selectedPathology === "Other" && (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pl-[60px]">
             <Input
               type="text"
               placeholder="Type and press Enter"
