@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
 
 interface SelectionUIProps {
   toothNumberOptions: string[];
@@ -22,15 +32,9 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
   const [isReady, setIsReady] = useState<boolean>(false);
 
   useEffect(() => {
-    // Auto-submit when both fields are filled and either:
-    // 1. The pathology is not "Other"
-    // 2. The pathology is "Other" and custom pathology has been entered and user pressed Enter
     if (selectedTooth && selectedPathology) {
       if (selectedPathology !== "Other" && !isReady) {
-        handleSelectionSubmit(
-          selectedTooth,
-          selectedPathology
-        );
+        handleSelectionSubmit(selectedTooth, selectedPathology);
       }
     }
   }, [selectedTooth, selectedPathology, isReady, handleSelectionSubmit]);
@@ -38,11 +42,7 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
   const handleCustomPathologyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && customPathology.trim()) {
       setIsReady(true);
-      handleSelectionSubmit(
-        selectedTooth,
-        selectedPathology,
-        customPathology
-      );
+      handleSelectionSubmit(selectedTooth, selectedPathology, customPathology);
     }
   };
 
@@ -50,67 +50,79 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
     handleSelectionSubmit("", "");
   };
 
-
   return (
-    <div className="w-[200px] relative bg-black bg-opacity-70 rounded-md p-3 space-y-2">
-      
-      <div onClick={handleClose} className='absolute right-2 top-0 text-xs text-white'>x</div>
-      <div className="flex  flex-col gap-2">
-        {/* Tooth Number Selection */}
-        <div className="flex  items-center gap-1 justify-between">
-          <label className="text-xs text-white font-medium">Tooth No</label>
-          <select
-            className="w-[90px] bg-[#707070] text-xs text-gray-300 px-2 py-1"
+    <Card className="w-[180px] relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg shadow-lg border-muted">
+      <button
+        onClick={handleClose}
+        className="absolute right-2 top-2 p-1 hover:bg-muted rounded-sm transition-colors"
+      >
+        <X className="h-3 w-3 text-muted-foreground" />
+      </button>
+
+      <div className="p-3 space-y-2">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground">
+            Tooth No.
+          </label>
+          <Select
             value={selectedTooth}
-            onChange={(e) => setSelectedTooth(e.target.value)}
+            onValueChange={setSelectedTooth}
           >
-            <option value="">Select tooth</option>
-            {toothNumberOptions.map(num => (
-              <option key={num} value={num}>{num}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-7 text-xs bg-muted/50">
+              <SelectValue placeholder="Select tooth" />
+            </SelectTrigger>
+            <SelectContent>
+              {toothNumberOptions.map(num => (
+                <SelectItem key={num} value={num} className="text-xs">
+                  {num}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Pathology Selection */}
-        <div className="flex items-center gap-1 justify-between">
-          <label className="text-xs text-white font-medium">Pathology</label>
-          <select
-            className="w-[90px] bg-[#707070] text-xs text-gray-300 px-2 py-1"
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground">
+            Pathology
+          </label>
+          <Select
             value={selectedPathology}
-            onChange={(e) => {
-              setSelectedPathology(e.target.value);
+            onValueChange={(value) => {
+              setSelectedPathology(value);
               setCustomPathology("");
               setIsReady(false);
             }}
           >
-            <option value="">Select pathology</option>
-            {pathologyOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-7 text-xs bg-muted/50">
+              <SelectValue placeholder="Select pathology" />
+            </SelectTrigger>
+            <SelectContent>
+              {pathologyOptions.map(option => (
+                <SelectItem key={option} value={option} className="text-xs">
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Custom Pathology Input */}
         {selectedPathology === "Other" && (
-          <div className="flex items-center gap-1 justify-between">
-            <input
+          <div className="space-y-1.5">
+            <Input
               type="text"
-              placeholder="Enter pathology and press Enter"
-              className="w-full bg-[#707070] text-xs text-gray-300 px-2 py-1 rounded"
+              placeholder="Type and press Enter"
+              className="h-7 text-xs bg-muted/50"
               value={customPathology}
               onChange={(e) => setCustomPathology(e.target.value)}
               onKeyDown={handleCustomPathologyKeyDown}
             />
+            <p className="text-[10px] text-muted-foreground italic">
+              Press Enter to save
+            </p>
           </div>
         )}
-
-        {selectedPathology === "Other" && (
-          <p className="text-xs text-gray-400 italic">
-            Press Enter to save custom pathology
-          </p>
-        )}
       </div>
-    </div>
+    </Card>
   );
 };
 
