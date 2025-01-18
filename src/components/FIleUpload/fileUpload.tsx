@@ -69,8 +69,8 @@ const FileUpload = () => {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoomLevel, setZoomLevel] = useState<any>(window.devicePixelRatio);
-  const [timer, setTimer] = useState<any | null>(null);
+  // const [zoomLevel, setZoomLevel] = useState<any>(window.devicePixelRatio);
+  // const [timer, setTimer] = useState<any | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -625,30 +625,30 @@ const FileUpload = () => {
   };
 
 
-  useEffect(() => {
-    const handleZoom = () => {
-      setZoomLevel(window.devicePixelRatio);
+  // useEffect(() => {
+  //   const handleZoom = () => {
+  //     setZoomLevel(window.devicePixelRatio);
 
-      if (timer) {
-        clearTimeout(timer);
-      }
+  //     if (timer) {
+  //       clearTimeout(timer);
+  //     }
 
-      const newTimer = setTimeout(() => {
-        handleUpload();
-      }, 2000);
+  //     const newTimer = setTimeout(() => {
+  //       handleUpload();
+  //     }, 2000);
 
-      setTimer(newTimer as any);
-    };
+  //     setTimer(newTimer as any);
+  //   };
 
-    window.addEventListener("resize", handleZoom);
+  //   window.addEventListener("resize", handleZoom);
 
-    return () => {
-      window.removeEventListener("resize", handleZoom);
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [zoomLevel, timer]);
+  //   return () => {
+  //     window.removeEventListener("resize", handleZoom);
+  //     if (timer) {
+  //       clearTimeout(timer);
+  //     }
+  //   };
+  // }, [zoomLevel, timer]);
 
 
 
@@ -1186,7 +1186,7 @@ const FileUpload = () => {
 
 
   return (
-    <div className="xl:flex grid h-screen w-full  max-w-[2000px] mx-auto">
+    <div className="xl:flex grid h-screen bg-black w-full  max-w-[2000px] mx-auto">
       {isLoading && <LoadingSpinner />}
 
       <main className="w-4/5  max-xl:w-full flex flex-col">
