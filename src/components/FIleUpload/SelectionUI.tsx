@@ -46,11 +46,18 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
     }
   };
 
+  const handleClose = () => {
+    handleSelectionSubmit("", "");
+  };
+
+
   return (
-    <div className="w-[200px] bg-black bg-opacity-70 rounded-md p-3 space-y-2">
-      <div className="flex flex-col gap-2">
+    <div className="w-[200px] relative bg-black bg-opacity-70 rounded-md p-3 space-y-2">
+      
+      <div onClick={handleClose} className='absolute right-2 top-0 text-xs text-white'>x</div>
+      <div className="flex  flex-col gap-2">
         {/* Tooth Number Selection */}
-        <div className="flex items-center gap-1 justify-between">
+        <div className="flex  items-center gap-1 justify-between">
           <label className="text-xs text-white font-medium">Tooth No</label>
           <select
             className="w-[90px] bg-[#707070] text-xs text-gray-300 px-2 py-1"
