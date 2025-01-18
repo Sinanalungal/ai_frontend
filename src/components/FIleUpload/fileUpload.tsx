@@ -1186,7 +1186,7 @@ const FileUpload = () => {
 
 
   return (
-    <div className="xl:flex grid h-screen bg-black w-full  max-w-[2000px] mx-auto">
+    <div className="xl:flex grid min-h-screen bg-black w-full  max-w-[2000px] mx-auto">
       {isLoading && <LoadingSpinner />}
 
       <main className="w-4/5  max-xl:w-full flex flex-col">
