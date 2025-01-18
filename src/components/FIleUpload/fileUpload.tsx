@@ -1,17 +1,23 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { useDropzone } from 'react-dropzone';
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 import { MdOutlineCloudUpload, MdOutlineFileDownload } from "react-icons/md";
 import { RiDeleteBinLine } from "react-icons/ri";
-import Switch from 'react-switch';
-import axios from 'axios';
-import { toast } from 'sonner';
-import { FaSquareFull, FaCircle, FaArrowsAlt, FaMousePointer, FaEdit, FaUndo } from "react-icons/fa";
+import Switch from "react-switch";
+import axios from "axios";
+import { toast } from "sonner";
+import {
+  FaSquareFull,
+  FaCircle,
+  FaArrowsAlt,
+  FaMousePointer,
+  FaEdit,
+  FaUndo,
+} from "react-icons/fa";
 import { BsDash, BsBoundingBoxCircles } from "react-icons/bs";
-import Toolbar from '../Reusable/Toolbar';
-import AnnotationsList from './AnnotationsList';
-import LoadingSpinner from '../Loading/Loading';
-import SelectionUI from './SelectionUI';
-
+import Toolbar from "../Reusable/Toolbar";
+import AnnotationsList from "./AnnotationsList";
+import LoadingSpinner from "../Loading/Loading";
+import SelectionUI from "./SelectionUI";
 
 /**
  * Interface representing a drawing annotation.
@@ -27,7 +33,6 @@ export interface Drawing {
   pathology?: string;
   customPathology?: string;
 }
-
 
 /**
  * Interface for annotation data containing class and regions of interest (ROI).
@@ -61,9 +66,11 @@ const SNAP_THRESHOLD = 10;
  */
 const FileUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [checkType, setCheckType] = useState<'qc' | 'path'>('qc');
+  const [checkType, setCheckType] = useState<"qc" | "path">("qc");
   const [isAnnotationEnabled, setIsAnnotationEnabled] = useState(true);
-  const [_uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
+  const [_uploadResponse, setUploadResponse] = useState<UploadResponse | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -75,18 +82,30 @@ const FileUpload = () => {
   const [drawings, setDrawings] = useState<Drawing[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentTool, setCurrentTool] = useState<string>("select");
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const [currentPoints, setCurrentPoints] = useState<number[]>([]);
   const [isPolygonDrawing, setIsPolygonDrawing] = useState(false);
   const [isTransforming, setIsTransforming] = useState(false);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
-  const [transformOrigin, setTransformOrigin] = useState<{ x: number, y: number } | null>(null);
-  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
+  const [transformOrigin, setTransformOrigin] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(
+    null
+  );
   const [isDraggingPoint, setIsDraggingPoint] = useState(false);
-  const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
-  const [draggedPointOffset, setDraggedPointOffset] = useState<{ x: number, y: number } | null>(null);
+  const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(
+    null
+  );
+  const [draggedPointOffset, setDraggedPointOffset] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [drawingHistory, setDrawingHistory] = useState<Drawing[][]>([]);
-  const [showSelecting, setShowSelecting] = useState(false)
+  const [showSelecting, setShowSelecting] = useState(false);
   const [_selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 });
   const [editingDrawing, setEditingDrawing] = useState<{
     id: string;
@@ -95,10 +114,92 @@ const FileUpload = () => {
     customPathology: string;
   } | null>(null);
 
-  const toothNumberOptions = [" ", "1", "2", "3", "4", "5", "6", "7", "8"];
-  const pathologyOptions = [...["Cavity", "Missing", "Fracture", "Decay"], "Other"];
-
-
+  const toothNumberOptions = [
+    " ",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32",
+  ];
+  const pathologyOptions = [
+    ...[
+      "Caries",
+      "Deep Caries",
+      "Crown",
+      "Filling",
+      "Implant",
+      "Misaligned Teeth",
+      "Mandibular Canal",
+      "Missing Teeth",
+      "Periapical Lesion",
+      "Retained Root",
+      "Root Canal Treatment",
+      "Root Piece",
+      "Impacted Tooth",
+      "Maxillary Sinus",
+      "Bone Loss",
+      "Fractured Teeth",
+      "Permanent Teeth",
+      "Primary Teeth",
+      "Supra Eruption",
+      "TAD (Temporary Anchorage Device)",
+      "Abutment",
+      "Attrition",
+      "Bone Defect",
+      "Gingival Former",
+      "Metal Band",
+      "Orthodontic Brackets",
+      "Permanent Retainer",
+      "Post-core",
+      "Plating",
+      "Wire",
+      "Cyst",
+      "Root Resorption",
+      "Hyperdontia",
+      "Hypodontia",
+      "Amalgam Tattoo",
+      "Periodontal Abscess",
+      "Fibrous Dysplasia",
+      "Enamel Hypoplasia",
+      "Temporomandibular Joint (TMJ) Disorders",
+      "Sinusitis",
+      "Torus Mandibularis",
+      "Zygomatic Process Abnormalities",
+      "Cemento-Osseous Dysplasia",
+      "Osteosclerosis",
+      "Pulp Stones",
+      "Dilaceration",
+    ],
+    "Other",
+  ];
 
   /**
    * Function to get the scaled point coordinates from a mouse event.
@@ -110,7 +211,7 @@ const FileUpload = () => {
     const rect = canvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      y: e.clientY - rect.top,
     };
   };
 
@@ -128,7 +229,7 @@ const FileUpload = () => {
     // Clear the canvas
     const canvas = canvasRef.current;
     if (canvas) {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
@@ -140,9 +241,9 @@ const FileUpload = () => {
     if (drawingHistory.length > 0) {
       const previousState = drawingHistory[drawingHistory.length - 1];
       setDrawings(previousState);
-      setDrawingHistory(history => history.slice(0, -1));
+      setDrawingHistory((history) => history.slice(0, -1));
       if (showSelecting) {
-        setShowSelecting(false)
+        setShowSelecting(false);
       }
     }
   };
@@ -159,19 +260,23 @@ const FileUpload = () => {
     formData.append("model_name", checkType);
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/inference/`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          'ngrok-skip-browser-warning': '1',
-        },
-      });
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/inference/`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "ngrok-skip-browser-warning": "1",
+          },
+        }
+      );
 
       const responseData = res.data as UploadResponse;
       setUploadResponse(responseData);
       processApiResponse(responseData);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to process image');
+      toast.error("Failed to process image");
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +298,7 @@ const FileUpload = () => {
             [drawing.points[0], drawing.points[1]], // top-left
             [drawing.points[2], drawing.points[1]], // top-right
             [drawing.points[2], drawing.points[3]], // bottom-right
-            [drawing.points[0], drawing.points[3]]  // bottom-left
+            [drawing.points[0], drawing.points[3]], // bottom-left
           ];
 
           for (let i = 0; i < points.length; i++) {
@@ -206,7 +311,7 @@ const FileUpload = () => {
                 drawingId: drawing.id,
                 pointIndex: i,
                 originalX: points[i][0],
-                originalY: points[i][1]
+                originalY: points[i][1],
               };
             }
           }
@@ -215,7 +320,7 @@ const FileUpload = () => {
         case "line": {
           const points = [
             [drawing.points[0], drawing.points[1]], // start
-            [drawing.points[2], drawing.points[3]]  // end
+            [drawing.points[2], drawing.points[3]], // end
           ];
 
           for (let i = 0; i < points.length; i++) {
@@ -228,7 +333,7 @@ const FileUpload = () => {
                 drawingId: drawing.id,
                 pointIndex: i,
                 originalX: points[i][0],
-                originalY: points[i][1]
+                originalY: points[i][1],
               };
             }
           }
@@ -245,7 +350,7 @@ const FileUpload = () => {
                 drawingId: drawing.id,
                 pointIndex: i / 2,
                 originalX: drawing.points[i],
-                originalY: drawing.points[i + 1]
+                originalY: drawing.points[i + 1],
               };
             }
           }
@@ -255,8 +360,6 @@ const FileUpload = () => {
     }
     return null;
   };
-
-
 
   /**
    * Drawing shapes function for start drawing
@@ -290,7 +393,7 @@ const FileUpload = () => {
         setIsDraggingPoint(true);
         setDraggedPointOffset({
           x: x - nearestPoint.originalX,
-          y: y - nearestPoint.originalY
+          y: y - nearestPoint.originalY,
         });
         return;
       }
@@ -301,40 +404,42 @@ const FileUpload = () => {
       } else {
         const startX = currentPoints[0];
         const startY = currentPoints[1];
-        const distance = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
+        const distance = Math.sqrt(
+          Math.pow(x - startX, 2) + Math.pow(y - startY, 2)
+        );
 
         if (distance < SNAP_THRESHOLD && currentPoints.length >= 6) {
           // Save history before completing polygon
-          setDrawingHistory(history => [...history, [...drawings]]);
+          setDrawingHistory((history) => [...history, [...drawings]]);
           const newDrawing: Drawing = {
             type: "polygon",
             points: [...currentPoints],
             label: `Polygon ${drawings.length + 1}`,
             id: `drawing-${Date.now()}`,
             visible: true,
-            transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } }
+            transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } },
           };
           setDrawings([...drawings, newDrawing]);
           setIsPolygonDrawing(false);
           setCurrentPoints([]);
-          setShowSelecting(true)
+          setShowSelecting(true);
         } else {
-          setCurrentPoints(prev => [...prev, x, y]);
+          setCurrentPoints((prev) => [...prev, x, y]);
         }
       }
     } else if (currentTool === "point") {
       // Save history before adding point
-      setDrawingHistory(history => [...history, [...drawings]]);
+      setDrawingHistory((history) => [...history, [...drawings]]);
       const newDrawing: Drawing = {
         type: "point",
         points: [x, y],
         label: `Point ${drawings.length + 1}`,
         id: `drawing-${Date.now()}`,
         visible: true,
-        transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } }
+        transform: { scale: 1, rotation: 0, translate: { x: 0, y: 0 } },
       };
       setDrawings([...drawings, newDrawing]);
-      setShowSelecting(true)
+      setShowSelecting(true);
     } else {
       setIsDrawing(true);
       setStartPoint({ x, y });
@@ -348,7 +453,7 @@ const FileUpload = () => {
     if (!drawing.visible) return;
 
     ctx.beginPath();
-    ctx.strokeStyle = '#00FF00';
+    ctx.strokeStyle = "#00FF00";
     ctx.lineWidth = 2;
 
     const points = drawing.points;
@@ -377,15 +482,14 @@ const FileUpload = () => {
     }
 
     if (drawing.label) {
-      ctx.font = '14px Arial';
+      ctx.font = "14px Arial";
       const textMetrics = ctx.measureText(drawing.label);
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+      ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
       ctx.fillRect(points[0], points[1] - 20, textMetrics.width + 10, 20);
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = "#FFFFFF";
       ctx.fillText(drawing.label, points[0] + 5, points[1] - 5);
     }
   };
-
 
   /**
    * Handling Mouse Drawing Events
@@ -400,34 +504,36 @@ const FileUpload = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     if (isTransforming && selectedShape) {
-      const drawing = drawings.find(d => d.id === selectedShape);
+      const drawing = drawings.find((d) => d.id === selectedShape);
       if (!drawing || !transformOrigin) return;
 
       const dx = x - transformOrigin.x;
       const dy = y - transformOrigin.y;
 
-      setDrawings(drawings.map(d => {
-        if (d.id === selectedShape) {
-          return {
-            ...d,
-            points: d.points.map((point, index) =>
-              index % 2 === 0 ? point + dx : point + dy
-            ),
-            transform: {
-              ...d.transform,
-              translate: {
-                x: (d.transform?.translate?.x || 0) + dx,
-                y: (d.transform?.translate?.y || 0) + dy,
+      setDrawings(
+        drawings.map((d) => {
+          if (d.id === selectedShape) {
+            return {
+              ...d,
+              points: d.points.map((point, index) =>
+                index % 2 === 0 ? point + dx : point + dy
+              ),
+              transform: {
+                ...d.transform,
+                translate: {
+                  x: (d.transform?.translate?.x || 0) + dx,
+                  y: (d.transform?.translate?.y || 0) + dy,
+                },
               },
-            },
-          };
-        }
-        return d;
-      }));
+            };
+          }
+          return d;
+        })
+      );
 
       setTransformOrigin({ x, y });
       return;
@@ -436,45 +542,55 @@ const FileUpload = () => {
     const point = getScaledPoint(e);
     if (!point) return;
 
-    if (isDraggingPoint && selectedDrawingId !== null && selectedPointIndex !== null) {
-      const offsetX = draggedPointOffset ? point.x - draggedPointOffset.x : point.x;
-      const offsetY = draggedPointOffset ? point.y - draggedPointOffset.y : point.y;
+    if (
+      isDraggingPoint &&
+      selectedDrawingId !== null &&
+      selectedPointIndex !== null
+    ) {
+      const offsetX = draggedPointOffset
+        ? point.x - draggedPointOffset.x
+        : point.x;
+      const offsetY = draggedPointOffset
+        ? point.y - draggedPointOffset.y
+        : point.y;
 
-      setDrawings(prev => prev.map(drawing => {
-        if (drawing.id !== selectedDrawingId) return drawing;
+      setDrawings((prev) =>
+        prev.map((drawing) => {
+          if (drawing.id !== selectedDrawingId) return drawing;
 
-        const newPoints = [...drawing.points];
-        switch (drawing.type) {
-          case "rectangle": {
-            if (selectedPointIndex === 0) {
-              newPoints[0] = offsetX;
-              newPoints[1] = offsetY;
-            } else if (selectedPointIndex === 1) {
-              newPoints[2] = offsetX;
-              newPoints[1] = offsetY;
-            } else if (selectedPointIndex === 2) {
-              newPoints[2] = offsetX;
-              newPoints[3] = offsetY;
-            } else if (selectedPointIndex === 3) {
-              newPoints[0] = offsetX;
-              newPoints[3] = offsetY;
+          const newPoints = [...drawing.points];
+          switch (drawing.type) {
+            case "rectangle": {
+              if (selectedPointIndex === 0) {
+                newPoints[0] = offsetX;
+                newPoints[1] = offsetY;
+              } else if (selectedPointIndex === 1) {
+                newPoints[2] = offsetX;
+                newPoints[1] = offsetY;
+              } else if (selectedPointIndex === 2) {
+                newPoints[2] = offsetX;
+                newPoints[3] = offsetY;
+              } else if (selectedPointIndex === 3) {
+                newPoints[0] = offsetX;
+                newPoints[3] = offsetY;
+              }
+              break;
             }
-            break;
+            case "line": {
+              const pointIndex = selectedPointIndex * 2;
+              newPoints[pointIndex] = offsetX;
+              newPoints[pointIndex + 1] = offsetY;
+              break;
+            }
+            case "polygon": {
+              newPoints[selectedPointIndex * 2] = offsetX;
+              newPoints[selectedPointIndex * 2 + 1] = offsetY;
+              break;
+            }
           }
-          case "line": {
-            const pointIndex = selectedPointIndex * 2;
-            newPoints[pointIndex] = offsetX;
-            newPoints[pointIndex + 1] = offsetY;
-            break;
-          }
-          case "polygon": {
-            newPoints[selectedPointIndex * 2] = offsetX;
-            newPoints[selectedPointIndex * 2 + 1] = offsetY;
-            break;
-          }
-        }
-        return { ...drawing, points: newPoints };
-      }));
+          return { ...drawing, points: newPoints };
+        })
+      );
 
       drawAnnotations();
       return;
@@ -485,7 +601,7 @@ const FileUpload = () => {
 
       if (currentTool === "polygon" && isPolygonDrawing) {
         ctx.beginPath();
-        ctx.strokeStyle = '#00FF00';
+        ctx.strokeStyle = "#00FF00";
         ctx.lineWidth = 2;
         ctx.moveTo(currentPoints[0], currentPoints[1]);
         for (let i = 2; i < currentPoints.length; i += 2) {
@@ -495,14 +611,21 @@ const FileUpload = () => {
 
         const startX = currentPoints[0];
         const startY = currentPoints[1];
-        const distance = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
+        const distance = Math.sqrt(
+          Math.pow(x - startX, 2) + Math.pow(y - startY, 2)
+        );
         if (distance < SNAP_THRESHOLD && currentPoints.length >= 6) {
           ctx.lineTo(startX, startY);
         }
 
         ctx.stroke();
       } else if (startPoint) {
-        drawShape(ctx, { type: currentTool, points: [startPoint.x, startPoint.y, x, y], visible: true, label: '' } as any);
+        drawShape(ctx, {
+          type: currentTool,
+          points: [startPoint.x, startPoint.y, x, y],
+          visible: true,
+          label: "",
+        } as any);
       }
     }
   };
@@ -557,7 +680,7 @@ const FileUpload = () => {
     setSelectionPosition({ x, y });
 
     // Save current state to history before adding new drawing
-    setDrawingHistory(history => [...history, [...drawings]]);
+    setDrawingHistory((history) => [...history, [...drawings]]);
 
     let newDrawing: Drawing | null = null;
 
@@ -568,7 +691,7 @@ const FileUpload = () => {
           points: [...currentPoints],
           label: "", // Empty label initially
           id: `drawing-${Date.now()}`,
-          visible: true
+          visible: true,
         };
         setIsPolygonDrawing(false);
         setCurrentPoints([]);
@@ -579,7 +702,7 @@ const FileUpload = () => {
         points: [x, y],
         label: "", // Empty label initially
         id: `drawing-${Date.now()}`,
-        visible: true
+        visible: true,
       };
       setIsDrawing(false);
     } else if (startPoint) {
@@ -588,7 +711,7 @@ const FileUpload = () => {
         points: [startPoint.x, startPoint.y, x, y],
         label: "", // Empty label initially
         id: `drawing-${Date.now()}`,
-        visible: true
+        visible: true,
       };
       setIsDrawing(false);
       setStartPoint(null);
@@ -600,22 +723,26 @@ const FileUpload = () => {
     }
   };
 
-
-  const handleSelectionSubmit = (toothNumber: string, pathology: string, customPathology?: string) => {
-    setDrawings(prev => {
+  const handleSelectionSubmit = (
+    toothNumber: string,
+    pathology: string,
+    customPathology?: string
+  ) => {
+    setDrawings((prev) => {
       const lastDrawing = prev[prev.length - 1];
       if (lastDrawing) {
         // Create label based on pathology selection
-        const label = pathology === "Other" && customPathology
-          ? `${toothNumber}  ${customPathology}`
-          : `${toothNumber}  ${pathology}`;
+        const label =
+          pathology === "Other" && customPathology
+            ? `${toothNumber}  ${customPathology}`
+            : `${toothNumber}  ${pathology}`;
 
         const updatedDrawing = {
           ...lastDrawing,
           label,
           toothNumber,
           pathology,
-          customPathology
+          customPathology,
         };
         return [...prev.slice(0, -1), updatedDrawing];
       }
@@ -623,7 +750,6 @@ const FileUpload = () => {
     });
     setShowSelecting(false);
   };
-
 
   // useEffect(() => {
   //   const handleZoom = () => {
@@ -650,15 +776,13 @@ const FileUpload = () => {
   //   };
   // }, [zoomLevel, timer]);
 
-
-
   // Tools
   const tools = [
     {
       id: "undo",
       icon: <FaUndo size={20} color="white" />,
       label: "Undo",
-      onclickFn: handleUndo
+      onclickFn: handleUndo,
     },
     {
       id: "select",
@@ -668,7 +792,7 @@ const FileUpload = () => {
         setCurrentTool("select");
         setIsDrawing(false);
         setIsPolygonDrawing(false);
-      }
+      },
     },
     {
       id: "reshape",
@@ -678,34 +802,33 @@ const FileUpload = () => {
         setCurrentTool("reshape");
         setIsDrawing(false);
         setIsPolygonDrawing(false);
-      }
+      },
     },
     {
       id: "rectangle",
       icon: <FaSquareFull size={20} color="white" />,
       label: "Rectangle Tool",
-      onclickFn: () => setCurrentTool("rectangle")
+      onclickFn: () => setCurrentTool("rectangle"),
     },
     {
       id: "line",
       icon: <BsDash size={20} color="white" />,
       label: "Line Tool",
-      onclickFn: () => setCurrentTool("line")
+      onclickFn: () => setCurrentTool("line"),
     },
     {
       id: "point",
       icon: <FaCircle size={20} color="white" />,
       label: "Point Tool",
-      onclickFn: () => setCurrentTool("point")
+      onclickFn: () => setCurrentTool("point"),
     },
     {
       id: "polygon",
       icon: <BsBoundingBoxCircles size={20} color="white" />,
       label: "Polygon Tool",
-      onclickFn: () => setCurrentTool("polygon")
-    }
+      onclickFn: () => setCurrentTool("polygon"),
+    },
   ];
-
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -714,11 +837,9 @@ const FileUpload = () => {
       setTransformOrigin(null);
     };
 
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
-
-
 
   const processApiResponse = (responseData: UploadResponse) => {
     // const newAnnotations: Annotation[] = [];
@@ -730,7 +851,7 @@ const FileUpload = () => {
       if (!classMap.has(className)) {
         classMap.set(className, {
           class: className,
-          roi_xyxy: []
+          roi_xyxy: [],
         });
       }
 
@@ -739,7 +860,7 @@ const FileUpload = () => {
         coordinates: result.roi_xyxy[0] as any,
         visible: true,
         id: `${className}-${index}`,
-        label: (index + 1).toString()
+        label: (index + 1).toString(),
       });
     });
 
@@ -748,10 +869,12 @@ const FileUpload = () => {
 
   // Drawing management functions
   const toggleDrawingVisibility = (drawingId: string) => {
-    setDrawings(prev => prev.map(drawing => ({
-      ...drawing,
-      visible: drawing.id === drawingId ? !drawing.visible : drawing.visible
-    })));
+    setDrawings((prev) =>
+      prev.map((drawing) => ({
+        ...drawing,
+        visible: drawing.id === drawingId ? !drawing.visible : drawing.visible,
+      }))
+    );
   };
 
   const drawAnnotations = useCallback(() => {
@@ -759,7 +882,7 @@ const FileUpload = () => {
     const container = containerRef.current;
     if (!canvas || !container || !imageSize.width || !imageSize.height) return;
 
-    const imageElement = container.querySelector('img');
+    const imageElement = container.querySelector("img");
     if (!imageElement) return;
 
     const displayedWidth = imageElement.clientWidth;
@@ -770,7 +893,7 @@ const FileUpload = () => {
     canvas.style.width = `${displayedWidth}px`;
     canvas.style.height = `${displayedHeight}px`;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -782,8 +905,8 @@ const FileUpload = () => {
     const scaleY = displayedHeight / imageSize.height;
 
     // First, draw API annotations
-    annotations.forEach(annotation => {
-      annotation.roi_xyxy.forEach(coord => {
+    annotations.forEach((annotation) => {
+      annotation.roi_xyxy.forEach((coord) => {
         if (!coord.visible) return;
 
         const [x1, y1, x2, y2] = coord.coordinates;
@@ -794,31 +917,41 @@ const FileUpload = () => {
         const scaledY2 = y2 * scaleY;
 
         // Draw API annotation rectangle
-        ctx.strokeStyle = '#FF0000';
+        ctx.strokeStyle = "#FF0000";
         ctx.lineWidth = 2;
-        ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
+        ctx.strokeRect(
+          scaledX1,
+          scaledY1,
+          scaledX2 - scaledX1,
+          scaledY2 - scaledY1
+        );
 
         // Draw API annotation label with number first, then name
-        const label = `${coord.label} ${annotation.class}`;  // Changed this line to put number first
-        ctx.font = '14px Arial';
+        const label = `${coord.label} ${annotation.class}`; // Changed this line to put number first
+        ctx.font = "14px Arial";
         const textMetrics = ctx.measureText(label);
         const textHeight = 20;
 
         // Label background
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-        ctx.fillRect(scaledX1, scaledY1 - textHeight, textMetrics.width + 10, textHeight);
+        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+        ctx.fillRect(
+          scaledX1,
+          scaledY1 - textHeight,
+          textMetrics.width + 10,
+          textHeight
+        );
 
         // Label text
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = "#FFFFFF";
         ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
       });
     });
 
-    drawings.forEach(drawing => {
+    drawings.forEach((drawing) => {
       if (!drawing.visible) return;
 
       ctx.beginPath();
-      ctx.strokeStyle = '#00FF00';
+      ctx.strokeStyle = "#00FF00";
       ctx.lineWidth = 2;
 
       switch (drawing.type) {
@@ -851,8 +984,8 @@ const FileUpload = () => {
 
       // Draw label for drawing
       if (drawing.visible) {
-        ctx.font = '14px Arial';
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+        ctx.font = "14px Arial";
+        ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
         const textMetrics = ctx.measureText(drawing.label);
         ctx.fillRect(
           drawing.points[0],
@@ -860,8 +993,12 @@ const FileUpload = () => {
           textMetrics.width + 10,
           20
         );
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(drawing.label, drawing.points[0] + 5, drawing.points[1] - 5);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(
+          drawing.label,
+          drawing.points[0] + 5,
+          drawing.points[1] - 5
+        );
       }
     });
   }, [annotations, isAnnotationEnabled, imageSize, drawings]);
@@ -877,52 +1014,68 @@ const FileUpload = () => {
     canvas.style.cursor = currentTool === "select" ? "default" : "crosshair";
   }, [currentTool]);
 
-  const updateAnnotationLabel = (className: string, coordId: string, newLabel: string) => {
-    setAnnotations(prev => prev.map(ann => {
-      if (ann.class === className) {
-        return {
-          ...ann,
-          roi_xyxy: ann.roi_xyxy.map(coord => ({
-            ...coord,
-            label: coord.id === coordId ? newLabel : coord.label
-          }))
-        };
-      }
-      return ann;
-    }));
+  const updateAnnotationLabel = (
+    className: string,
+    coordId: string,
+    newLabel: string
+  ) => {
+    setAnnotations((prev) =>
+      prev.map((ann) => {
+        if (ann.class === className) {
+          return {
+            ...ann,
+            roi_xyxy: ann.roi_xyxy.map((coord) => ({
+              ...coord,
+              label: coord.id === coordId ? newLabel : coord.label,
+            })),
+          };
+        }
+        return ann;
+      })
+    );
     setEditingId(null); // Exit edit mode after updating
   };
 
-
   const toggleAnnotationVisibility = (className: string, coordId: string) => {
-    setAnnotations(prev => prev.map(ann => {
-      if (ann.class === className) {
-        return {
-          ...ann,
-          roi_xyxy: ann.roi_xyxy.map(coord => ({
-            ...coord,
-            visible: coord.id === coordId ? !coord.visible : coord.visible
-          }))
-        };
-      }
-      return ann;
-    }));
+    setAnnotations((prev) =>
+      prev.map((ann) => {
+        if (ann.class === className) {
+          return {
+            ...ann,
+            roi_xyxy: ann.roi_xyxy.map((coord) => ({
+              ...coord,
+              visible: coord.id === coordId ? !coord.visible : coord.visible,
+            })),
+          };
+        }
+        return ann;
+      })
+    );
   };
 
   const handleDelete = (className: string, coordId: string) => {
-    setAnnotations(prev => prev.map(ann => {
-      if (ann.class === className) {
-        return {
-          ...ann,
-          roi_xyxy: ann.roi_xyxy.filter(coord => coord.id !== coordId)
-        };
-      }
-      return ann;
-    }).filter(ann => ann.roi_xyxy.length > 0));
+    setAnnotations((prev) =>
+      prev
+        .map((ann) => {
+          if (ann.class === className) {
+            return {
+              ...ann,
+              roi_xyxy: ann.roi_xyxy.filter((coord) => coord.id !== coordId),
+            };
+          }
+          return ann;
+        })
+        .filter((ann) => ann.roi_xyxy.length > 0)
+    );
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent, className: string, coordId: string, label: string) => {
-    if (e.key === 'Enter') {
+  const handleKeyPress = (
+    e: React.KeyboardEvent,
+    className: string,
+    coordId: string,
+    label: string
+  ) => {
+    if (e.key === "Enter") {
       updateAnnotationLabel(className, coordId, label);
       setEditingId(null);
     }
@@ -935,19 +1088,17 @@ const FileUpload = () => {
   // };
 
   const deleteDrawing = (drawingId: string) => {
-    setDrawings(prev => prev.filter(drawing => drawing.id !== drawingId));
+    setDrawings((prev) => prev.filter((drawing) => drawing.id !== drawingId));
   };
-
-
 
   const handleDownloadWithAnnotations = () => {
     if (!selectedFile) {
-      toast.error('No image to download');
+      toast.error("No image to download");
       return;
     }
 
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
     if (!tempCtx) return;
 
     tempCanvas.width = imageSize.width;
@@ -956,7 +1107,7 @@ const FileUpload = () => {
     const img = new Image();
     img.onload = () => {
       // Get the currently displayed image dimensions
-      const displayedImage = containerRef.current?.querySelector('img');
+      const displayedImage = containerRef.current?.querySelector("img");
       if (!displayedImage) return;
 
       const displayedWidth = displayedImage.clientWidth;
@@ -970,35 +1121,40 @@ const FileUpload = () => {
 
       if (isAnnotationEnabled) {
         // Draw API annotations
-        annotations.forEach(annotation => {
-          annotation.roi_xyxy.forEach(coord => {
+        annotations.forEach((annotation) => {
+          annotation.roi_xyxy.forEach((coord) => {
             if (!coord.visible) return;
 
             const [x1, y1, x2, y2] = coord.coordinates;
 
-            tempCtx.strokeStyle = '#FF0000';
+            tempCtx.strokeStyle = "#FF0000";
             tempCtx.lineWidth = 2;
-            tempCtx.font = '14px Arial';
+            tempCtx.font = "14px Arial";
 
             tempCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
             const label = `${annotation.class} ${coord.label}`;
             const textMetrics = tempCtx.measureText(label);
             const textHeight = 20;
-            tempCtx.fillStyle = 'rgba(255, 0, 0, 0.7)';
-            tempCtx.fillRect(x1, y1 - textHeight, textMetrics.width + 10, textHeight);
+            tempCtx.fillStyle = "rgba(255, 0, 0, 0.7)";
+            tempCtx.fillRect(
+              x1,
+              y1 - textHeight,
+              textMetrics.width + 10,
+              textHeight
+            );
 
-            tempCtx.fillStyle = '#FFFFFF';
+            tempCtx.fillStyle = "#FFFFFF";
             tempCtx.fillText(label, x1 + 5, y1 - 5);
           });
         });
 
         // Draw custom drawings with scaling
-        drawings.forEach(drawing => {
+        drawings.forEach((drawing) => {
           if (!drawing.visible) return;
 
           tempCtx.beginPath();
-          tempCtx.strokeStyle = '#00FF00';
+          tempCtx.strokeStyle = "#00FF00";
           tempCtx.lineWidth = 2 * scaleX; // Scale line width
 
           // Scale font size
@@ -1022,15 +1178,19 @@ const FileUpload = () => {
               // Draw label
               const textMetrics = tempCtx.measureText(drawing.label);
               const textHeight = 20 * scaleY;
-              tempCtx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+              tempCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
               tempCtx.fillRect(
                 scaledX1,
                 scaledY1 - textHeight,
-                textMetrics.width + (10 * scaleX),
+                textMetrics.width + 10 * scaleX,
                 textHeight
               );
-              tempCtx.fillStyle = '#FFFFFF';
-              tempCtx.fillText(drawing.label, scaledX1 + (5 * scaleX), scaledY1 - (5 * scaleY));
+              tempCtx.fillStyle = "#FFFFFF";
+              tempCtx.fillText(
+                drawing.label,
+                scaledX1 + 5 * scaleX,
+                scaledY1 - 5 * scaleY
+              );
               break;
             }
 
@@ -1047,15 +1207,19 @@ const FileUpload = () => {
               // Draw label
               const textMetrics = tempCtx.measureText(drawing.label);
               const textHeight = 20 * scaleY;
-              tempCtx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+              tempCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
               tempCtx.fillRect(
                 scaledX1,
                 scaledY1 - textHeight,
-                textMetrics.width + (10 * scaleX),
+                textMetrics.width + 10 * scaleX,
                 textHeight
               );
-              tempCtx.fillStyle = '#FFFFFF';
-              tempCtx.fillText(drawing.label, scaledX1 + (5 * scaleX), scaledY1 - (5 * scaleY));
+              tempCtx.fillStyle = "#FFFFFF";
+              tempCtx.fillText(
+                drawing.label,
+                scaledX1 + 5 * scaleX,
+                scaledY1 - 5 * scaleY
+              );
               break;
             }
             case "point": {
@@ -1071,15 +1235,19 @@ const FileUpload = () => {
               // Draw label
               const textMetrics = tempCtx.measureText(drawing.label);
               const textHeight = 20 * scaleY;
-              tempCtx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+              tempCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
               tempCtx.fillRect(
                 scaledX,
                 scaledY - textHeight,
-                textMetrics.width + (10 * scaleX),
+                textMetrics.width + 10 * scaleX,
                 textHeight
               );
-              tempCtx.fillStyle = '#FFFFFF';
-              tempCtx.fillText(drawing.label, scaledX + (5 * scaleX), scaledY - (5 * scaleY));
+              tempCtx.fillStyle = "#FFFFFF";
+              tempCtx.fillText(
+                drawing.label,
+                scaledX + 5 * scaleX,
+                scaledY - 5 * scaleY
+              );
               break;
             }
 
@@ -1099,15 +1267,19 @@ const FileUpload = () => {
                 // Draw label
                 const textMetrics = tempCtx.measureText(drawing.label);
                 const textHeight = 20 * scaleY;
-                tempCtx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+                tempCtx.fillStyle = "rgba(0, 255, 0, 0.7)";
                 tempCtx.fillRect(
                   scaledPoints[0],
                   scaledPoints[1] - textHeight,
-                  textMetrics.width + (10 * scaleX),
+                  textMetrics.width + 10 * scaleX,
                   textHeight
                 );
-                tempCtx.fillStyle = '#FFFFFF';
-                tempCtx.fillText(drawing.label, scaledPoints[0] + (5 * scaleX), scaledPoints[1] - (5 * scaleY));
+                tempCtx.fillStyle = "#FFFFFF";
+                tempCtx.fillText(
+                  drawing.label,
+                  scaledPoints[0] + 5 * scaleX,
+                  scaledPoints[1] - 5 * scaleY
+                );
               }
               break;
             }
@@ -1118,16 +1290,16 @@ const FileUpload = () => {
       tempCanvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
+          const link = document.createElement("a");
           link.href = url;
           link.download = `annotated_${selectedFile.name}`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
-          toast.success('Download completed');
+          toast.success("Download completed");
         }
-      }, 'image/png');
+      }, "image/png");
     };
 
     img.src = URL.createObjectURL(selectedFile);
@@ -1147,7 +1319,7 @@ const FileUpload = () => {
       img.onload = () => {
         setImageSize({
           width: img.width,
-          height: img.height
+          height: img.height,
         });
       };
       img.src = URL.createObjectURL(file);
@@ -1157,12 +1329,17 @@ const FileUpload = () => {
   /**
    * Droping functions or images types.
    */
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    isDragReject,
+  } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.png', '.gif', '.jpg']
+      "image/*": [".jpeg", ".png", ".gif", ".jpg"],
     },
-    multiple: false
+    multiple: false,
   });
 
   const renderAnnotationsList = () => (
@@ -1183,8 +1360,6 @@ const FileUpload = () => {
     />
   );
 
-
-
   return (
     <div className="xl:flex grid min-h-screen bg-black w-full  max-w-[2000px] mx-auto">
       {isLoading && <LoadingSpinner />}
@@ -1197,7 +1372,9 @@ const FileUpload = () => {
         <section className="flex justify-center items-center p-4 gap-5">
           <div className="flex items-center max-[400px]:flex-col max-[400px]:gap-2 max-[400px]:mt-3">
             <label
-              className={`mr-2 max-[400px]:text-sm  text-lg font-medium ${checkType === "qc" ? "text-white" : "text-gray-500"}`}
+              className={`mr-2 max-[400px]:text-sm  text-lg font-medium ${
+                checkType === "qc" ? "text-white" : "text-gray-500"
+              }`}
             >
               Quality Check
             </label>
@@ -1213,7 +1390,9 @@ const FileUpload = () => {
               checkedIcon={false}
             />
             <label
-              className={`ml-2 max-[400px]:text-sm  font-medium text-lg ${checkType === "path" ? "text-white" : "text-gray-500"}`}
+              className={`ml-2 max-[400px]:text-sm  font-medium text-lg ${
+                checkType === "path" ? "text-white" : "text-gray-500"
+              }`}
             >
               Pathology Check
             </label>
@@ -1224,15 +1403,20 @@ const FileUpload = () => {
           <div
             {...(!selectedFile ? getRootProps() : {})}
             className={`relative border-2 border-[#393838] border-dotted rounded-lg p-4 h-full flex flex-col items-center justify-center cursor-pointer 
-                                  ${isDragActive ? "bg-gray-700" : "hover:bg-gray-800"}
+                                  ${
+                                    isDragActive
+                                      ? "bg-gray-700"
+                                      : "hover:bg-gray-800"
+                                  }
                                   ${isDragReject ? "border-red-500" : ""} 
                                   transition-colors duration-300`}
           >
-
             {selectedFile ? (
               <>
                 <div className="text-center relative" ref={containerRef}>
-                  <p className="text-gray-500 text-xs mb-2">{"< " + selectedFile.name + " >"}</p>
+                  <p className="text-gray-500 text-xs mb-2">
+                    {"< " + selectedFile.name + " >"}
+                  </p>
                   <div className="relative inline-block">
                     <img
                       src={URL.createObjectURL(selectedFile)}
@@ -1246,19 +1430,20 @@ const FileUpload = () => {
                       style={{
                         width: "100%",
                         height: "100%",
-                        cursor: currentTool === "select" ? "default" : "crosshair"
+                        cursor:
+                          currentTool === "select" ? "default" : "crosshair",
                       }}
                       onMouseDown={startDrawing}
                       onMouseMove={draw}
                       onMouseUp={endDrawing}
                       onMouseLeave={() => setIsDrawing(false)}
                     />
-                    {drawings.map(drawing => renderTransformButton(drawing))}
+                    {drawings.map((drawing) => renderTransformButton(drawing))}
                   </div>
                 </div>
 
-                {showSelecting &&
-                  <div className='absolute h-full w-full bg-transparent flex justify-center items-center'>
+                {showSelecting && (
+                  <div className="absolute h-full w-full bg-transparent flex justify-center items-center">
                     <SelectionUI
                       canvasRef={canvasRef}
                       handleSelectionSubmit={handleSelectionSubmit}
@@ -1266,7 +1451,7 @@ const FileUpload = () => {
                       pathologyOptions={pathologyOptions}
                     />
                   </div>
-                }
+                )}
 
                 <button
                   onClick={(e) => {
@@ -1279,15 +1464,20 @@ const FileUpload = () => {
                 </button>
               </>
             ) : (
-              <><input {...getInputProps()} />
+              <>
+                <input {...getInputProps()} />
                 <div className="flex flex-col items-center justify-center">
-                  <MdOutlineCloudUpload size={64} className="text-[#393838] mb-4" />
+                  <MdOutlineCloudUpload
+                    size={64}
+                    className="text-[#393838] mb-4"
+                  />
                   <p className="text-[#393838] text-lg flex text-center max-[400px]:text-xs">
                     {isDragActive
                       ? "Drop the image here ..."
                       : "Drag and drop an image here, or click to select a file"}
                   </p>
-                </div></>
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -1314,10 +1504,13 @@ const FileUpload = () => {
           </div>
 
           <div className="flex max-[400px]:flex-col  items-center">
-            <label className="max-[400px]:mr-0 mr-4 text-lg font-bold">Annotation</label>
+            <label className="max-[400px]:mr-0 mr-4 text-lg font-bold">
+              Annotation
+            </label>
             <label
-              className={`mr-2 text-lg font-medium ${!isAnnotationEnabled ? "text-white" : "text-gray-500"
-                }`}
+              className={`mr-2 text-lg font-medium ${
+                !isAnnotationEnabled ? "text-white" : "text-gray-500"
+              }`}
             >
               Off
             </label>
@@ -1333,8 +1526,9 @@ const FileUpload = () => {
               checkedIcon={false}
             />
             <label
-              className={`max-[400px]:ml-0 ml-2 font-medium text-lg ${isAnnotationEnabled ? "text-white" : "text-gray-500"
-                }`}
+              className={`max-[400px]:ml-0 ml-2 font-medium text-lg ${
+                isAnnotationEnabled ? "text-white" : "text-gray-500"
+              }`}
             >
               On
             </label>
@@ -1343,14 +1537,13 @@ const FileUpload = () => {
       </main>
 
       <aside className="bg-black max-xl:w-full w-1/5 flex flex-col pt-24 px-4">
-        <h2 className="text-[30px] font-bold text-white max-sm:text-lg mb-4">OPG Analysis</h2>
+        <h2 className="text-[30px] font-bold text-white max-sm:text-lg mb-4">
+          OPG Analysis
+        </h2>
         {renderAnnotationsList()}
       </aside>
     </div>
   );
-
 };
-
-
 
 export default FileUpload;
