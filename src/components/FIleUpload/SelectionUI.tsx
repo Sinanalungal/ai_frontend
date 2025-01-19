@@ -72,9 +72,9 @@ const SelectionUI: React.FC<SelectionUIProps> = ({
             </SelectTrigger>
             <SelectContent>
               <div className="max-h-[200px] overflow-y-auto">
-                <SelectItem key={" "} value={" "} className="text-xs">
+                {/* <SelectItem key={" "} value={" "} className="text-xs">
                   None
-                </SelectItem>
+                </SelectItem> */}
                 {toothNumberOptions.map((num) => (
                   <SelectItem key={num} value={num} className="text-xs">
                     {num}
