@@ -35,6 +35,7 @@ interface Annotation {
   class: string;
   roi_xyxy: Array<{
     coordinates: number[];
+    poly?: number[][]; // Optional polygon coordinates
     visible: boolean;
     id: string;
     label: string;
@@ -45,7 +46,11 @@ interface UploadResponse {
   message: string;
   data: {
     inference_time: number;
-    results: Annotation[];
+    results: Array<{
+      class: string;
+      roi_xyxy: number[][];
+      poly?: number[][][]; // Optional in response
+    }>;
     unique_id: string;
   };
 }
@@ -56,7 +61,7 @@ const FileUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [checkType, setCheckType] = useState<"qc" | "path">("qc");
   const [isAnnotationEnabled, setIsAnnotationEnabled] = useState(true);
-  const [_uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
+  const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -85,6 +90,7 @@ const FileUpload = () => {
     pathology: string;
     customPathology: string;
   } | null>(null);
+  const [lastImageSize, setLastImageSize] = useState({ width: 0, height: 0 });
 
   const toothNumberOptions = [
     "11", "12", "13", "14", "15", "16", "17", "18",
@@ -92,7 +98,7 @@ const FileUpload = () => {
     "31", "32", "33", "34", "35", "36", "37", "38",
     "41", "42", "43", "44", "45", "46", "47", "48"
   ];
-  
+
   const pathologyOptions = [
     ...[
       "Caries",
@@ -145,6 +151,12 @@ const FileUpload = () => {
     "Other",
   ];
 
+  const classColors: { [key: string]: string } = {
+    "impacted tooth": "rgba(255, 165, 0, 0.5)", // Orange
+    "Filling": "rgba(0, 128, 255, 0.5)", // Blue
+    // Add more class-color mappings as needed
+  };
+
   const getScaledPoint = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
@@ -165,6 +177,7 @@ const FileUpload = () => {
     setIsDrawing(false);
     setIsPolygonDrawing(false);
     setCurrentPoints([]);
+    setLastImageSize({ width: 0, height: 0 });
 
     const canvas = canvasRef.current;
     if (canvas) {
@@ -190,6 +203,9 @@ const FileUpload = () => {
     if (!selectedFile) return;
 
     setIsLoading(true);
+    setAnnotations([]); // Clear annotations to avoid mismatch during fetch
+    setUploadResponse(null); // Reset response to ensure fresh data
+
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("model_name", checkType);
@@ -305,7 +321,6 @@ const FileUpload = () => {
           break;
         }
         case "line": {
-          // Simple line hit-test (within threshold distance)
           const [x1, y1, x2, y2] = drawing.points;
           const distance = pointToLineDistance(x, y, x1, y1, x2, y2);
           if (distance < 10) {
@@ -332,8 +347,14 @@ const FileUpload = () => {
     return null;
   };
 
-  // Helper function to calculate distance from point to line
-  const pointToLineDistance = (x: number, y: number, x1: number, y1: number, x2: number, y2: number) => {
+  const pointToLineDistance = (
+    x: number,
+    y: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ) => {
     const A = x - x1;
     const B = y - y1;
     const C = x2 - x1;
@@ -360,7 +381,6 @@ const FileUpload = () => {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Helper function to check if point is inside polygon
   const isPointInPolygon = (x: number, y: number, points: number[]) => {
     let inside = false;
     for (let i = 0, j = points.length - 2; i < points.length; i += 2) {
@@ -369,7 +389,7 @@ const FileUpload = () => {
       const xj = points[j];
       const yj = points[j + 1];
 
-      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
         inside = !inside;
       }
       j = i;
@@ -676,7 +696,7 @@ const FileUpload = () => {
       return;
     }
 
-    if ((!isDrawing && !isPolygonDrawing) || !isAnnotationEnabled) return;
+    if (!isDrawing && !isPolygonDrawing || !isAnnotationEnabled) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -862,7 +882,8 @@ const FileUpload = () => {
 
       const annotation = classMap.get(className)!;
       annotation.roi_xyxy.push({
-        coordinates: result.roi_xyxy[0] as any,
+        coordinates: result.roi_xyxy[0],
+        poly: result.poly ? result.poly[0] : undefined, // Safely handle missing poly
         visible: true,
         id: `${className}-${index}`,
         label: (index + 1).toString(),
@@ -907,42 +928,85 @@ const FileUpload = () => {
     const scaleX = displayedWidth / imageSize.width;
     const scaleY = displayedHeight / imageSize.height;
 
-    annotations.forEach((annotation) => {
+    annotations.forEach((annotation, annIndex) => {
       annotation.roi_xyxy.forEach((coord) => {
         if (!coord.visible) return;
 
-        const [x1, y1, x2, y2] = coord.coordinates;
+        if (checkType === "path" && coord.poly && coord.poly.length > 0) {
+          ctx.beginPath();
+          const color = classColors[annotation.class] || "rgba(255, 0, 0, 0.5)";
+          ctx.fillStyle = color;
 
-        const scaledX1 = x1 * scaleX;
-        const scaledY1 = y1 * scaleY;
-        const scaledX2 = x2 * scaleX;
-        const scaledY2 = y2 * scaleY;
+          ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+          ctx.shadowBlur = 5;
+          ctx.shadowOffsetX = 2 * (annIndex + 1);
+          ctx.shadowOffsetY = 2 * (annIndex + 1);
 
-        ctx.strokeStyle = "#FF0000";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(
-          scaledX1,
-          scaledY1,
-          scaledX2 - scaledX1,
-          scaledY2 - scaledY1
-        );
+          ctx.moveTo(coord.poly[0][0] * scaleX, coord.poly[0][1] * scaleY);
+          for (let i = 1; i < coord.poly.length; i++) {
+            ctx.lineTo(coord.poly[i][0] * scaleX, coord.poly[i][1] * scaleY);
+          }
+          ctx.closePath();
+          ctx.fill();
 
-        const label = `${coord.label} ${annotation.class}`.trim();
-        if (label) {
-          ctx.font = "14px Arial";
-          const textMetrics = ctx.measureText(label);
-          const textHeight = 20;
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
 
-          ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-          ctx.fillRect(
+          const label = `${coord.label} ${annotation.class}`.trim();
+          if (label) {
+            ctx.font = "14px Arial";
+            const textMetrics = ctx.measureText(label);
+            const textHeight = 20;
+            const labelX = coord.poly[0][0] * scaleX;
+            const labelY = coord.poly[0][1] * scaleY;
+
+            ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.fillRect(
+              labelX,
+              labelY - textHeight,
+              textMetrics.width + 10,
+              textHeight
+            );
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillText(label, labelX + 5, labelY - 5);
+          }
+        } else {
+          const [x1, y1, x2, y2] = coord.coordinates;
+
+          const scaledX1 = x1 * scaleX;
+          const scaledY1 = y1 * scaleY;
+          const scaledX2 = x2 * scaleX;
+          const scaledY2 = y2 * scaleY;
+
+          ctx.strokeStyle = "#FF0000";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(
             scaledX1,
-            scaledY1 - textHeight,
-            textMetrics.width + 10,
-            textHeight
+            scaledY1,
+            scaledX2 - scaledX1,
+            scaledY2 - scaledY1
           );
 
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+          const label = `${coord.label} ${annotation.class}`.trim();
+          if (label) {
+            ctx.font = "14px Arial";
+            const textMetrics = ctx.measureText(label);
+            const textHeight = 20;
+
+            ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.fillRect(
+              scaledX1,
+              scaledY1 - textHeight,
+              textMetrics.width + 10,
+              textHeight
+            );
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+          }
         }
       });
     });
@@ -1008,7 +1072,7 @@ const FileUpload = () => {
         );
       }
     });
-  }, [annotations, isAnnotationEnabled, imageSize, drawings]);
+  }, [annotations, isAnnotationEnabled, imageSize, drawings, checkType]);
 
   useEffect(() => {
     drawAnnotations();
@@ -1020,6 +1084,39 @@ const FileUpload = () => {
 
     canvas.style.cursor = currentTool === "select" ? "default" : "crosshair";
   }, [currentTool]);
+
+  // Resize handler with API refetch
+  useEffect(() => {
+    if (!selectedFile || !uploadResponse) return;
+
+    const handleResize = () => {
+      const imageElement = containerRef.current?.querySelector("img");
+      if (!imageElement) return;
+
+      const newWidth = imageElement.clientWidth;
+      const newHeight = imageElement.clientHeight;
+
+      if (
+        Math.abs(newWidth - lastImageSize.width) > 10 ||
+        Math.abs(newHeight - lastImageSize.height) > 10
+      ) {
+        setLastImageSize({ width: newWidth, height: newHeight });
+        handleUpload(); // Refetch API data on significant resize
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial call to set size
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [selectedFile, uploadResponse, lastImageSize, handleUpload]);
+
+  // Handle checkType switch with API refetch
+  useEffect(() => {
+    if (selectedFile) {
+      handleUpload(); // Refetch API data when checkType changes
+    }
+  }, [checkType, selectedFile]);
 
   const updateAnnotationLabel = (
     className: string,
@@ -1119,31 +1216,68 @@ const FileUpload = () => {
       tempCtx.drawImage(img, 0, 0, imageSize.width, imageSize.height);
 
       if (isAnnotationEnabled) {
-        annotations.forEach((annotation) => {
+        annotations.forEach((annotation, annIndex) => {
           annotation.roi_xyxy.forEach((coord) => {
             if (!coord.visible) return;
 
-            const [x1, y1, x2, y2] = coord.coordinates;
+            if (checkType === "path" && coord.poly && coord.poly.length > 0) {
+              tempCtx.beginPath();
+              const color = classColors[annotation.class] || "rgba(255, 0, 0, 0.5)";
+              tempCtx.fillStyle = color;
 
-            tempCtx.strokeStyle = "#FF0000";
-            tempCtx.lineWidth = 2;
-            tempCtx.font = "14px Arial";
+              tempCtx.shadowColor = "rgba(0, 0, 0, 0.5)";
+              tempCtx.shadowBlur = 5;
+              tempCtx.shadowOffsetX = 2 * (annIndex + 1);
+              tempCtx.shadowOffsetY = 2 * (annIndex + 1);
 
-            tempCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+              tempCtx.moveTo(coord.poly[0][0], coord.poly[0][1]);
+              for (let i = 1; i < coord.poly.length; i++) {
+                tempCtx.lineTo(coord.poly[i][0], coord.poly[i][1]);
+              }
+              tempCtx.closePath();
+              tempCtx.fill();
 
-            const label = `${annotation.class} ${coord.label}`;
-            const textMetrics = tempCtx.measureText(label);
-            const textHeight = 20;
-            tempCtx.fillStyle = "rgba(255, 0, 0, 0.7)";
-            tempCtx.fillRect(
-              x1,
-              y1 - textHeight,
-              textMetrics.width + 10,
-              textHeight
-            );
+              tempCtx.shadowColor = "transparent";
+              tempCtx.shadowBlur = 0;
+              tempCtx.shadowOffsetX = 0;
+              tempCtx.shadowOffsetY = 0;
 
-            tempCtx.fillStyle = "#FFFFFF";
-            tempCtx.fillText(label, x1 + 5, y1 - 5);
+              const label = `${annotation.class} ${coord.label}`;
+              const textMetrics = tempCtx.measureText(label);
+              const textHeight = 20;
+              tempCtx.fillStyle = "rgba(255, 0, 0, 0.7)";
+              tempCtx.fillRect(
+                coord.poly[0][0],
+                coord.poly[0][1] - textHeight,
+                textMetrics.width + 10,
+                textHeight
+              );
+
+              tempCtx.fillStyle = "#FFFFFF";
+              tempCtx.fillText(label, coord.poly[0][0] + 5, coord.poly[0][1] - 5);
+            } else {
+              const [x1, y1, x2, y2] = coord.coordinates;
+
+              tempCtx.strokeStyle = "#FF0000";
+              tempCtx.lineWidth = 2;
+              tempCtx.font = "14px Arial";
+
+              tempCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+              const label = `${annotation.class} ${coord.label}`;
+              const textMetrics = tempCtx.measureText(label);
+              const textHeight = 20;
+              tempCtx.fillStyle = "rgba(255, 0, 0, 0.7)";
+              tempCtx.fillRect(
+                x1,
+                y1 - textHeight,
+                textMetrics.width + 10,
+                textHeight
+              );
+
+              tempCtx.fillStyle = "#FFFFFF";
+              tempCtx.fillText(label, x1 + 5, y1 - 5);
+            }
           });
         });
 
@@ -1345,10 +1479,10 @@ const FileUpload = () => {
   );
 
   return (
-    <div className="xl:flex grid min-h-screen bg-black w-full  max-w-[2000px] mx-auto">
+    <div className="xl:flex grid min-h-screen bg-black w-full max-w-[2000px] mx-auto">
       {isLoading && <LoadingSpinner />}
 
-      <main className="w-4/5  max-xl:w-full flex flex-col">
+      <main className="w-4/5 max-xl:w-full flex flex-col">
         <header className="h-24 max-[400px]:mx-auto flex items-center justify-start text-[50px] font-bold text-white px-10 pt-10">
           <img src="/hhhh.png" className="h-12" alt="Vi.Ai-logo" />
         </header>
@@ -1356,7 +1490,7 @@ const FileUpload = () => {
         <section className="flex justify-center items-center p-4 gap-5">
           <div className="flex items-center max-[400px]:flex-col max-[400px]:gap-2 max-[400px]:mt-3">
             <label
-              className={`mr-2 max-[400px]:text-sm  text-lg font-medium ${
+              className={`mr-2 max-[400px]:text-sm text-lg font-medium ${
                 checkType === "qc" ? "text-white" : "text-gray-500"
               }`}
             >
@@ -1374,7 +1508,7 @@ const FileUpload = () => {
               checkedIcon={false}
             />
             <label
-              className={`ml-2 max-[400px]:text-sm  font-medium text-lg ${
+              className={`ml-2 max-[400px]:text-sm font-medium text-lg ${
                 checkType === "path" ? "text-white" : "text-gray-500"
               }`}
             >
@@ -1443,6 +1577,7 @@ const FileUpload = () => {
                     handleUpload();
                   }}
                   className="bg-white text-red-800 px-4 py-2 rounded mt-2"
+                  disabled={isLoading}
                 >
                   {isLoading ? "Processing..." : "Run AI"}
                 </button>
@@ -1487,7 +1622,7 @@ const FileUpload = () => {
             </button>
           </div>
 
-          <div className="flex max-[400px]:flex-col  items-center">
+          <div className="flex max-[400px]:flex-col items-center">
             <label className="max-[400px]:mr-0 mr-4 text-lg font-bold">
               Annotation
             </label>
