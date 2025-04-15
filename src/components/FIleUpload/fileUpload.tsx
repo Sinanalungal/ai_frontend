@@ -91,6 +91,12 @@ const FileUpload = () => {
     customPathology: string;
   } | null>(null);
   const [lastImageSize, setLastImageSize] = useState({ width: 0, height: 0 });
+  const [hoveredItem, setHoveredItem] = useState<{
+    type: "annotation" | "drawing";
+    className?: string;
+    coordId?: string;
+    drawingId?: string;
+  } | null>(null);
 
   const toothNumberOptions = [
     "11", "12", "13", "14", "15", "16", "17", "18",
@@ -159,9 +165,9 @@ const FileUpload = () => {
     'Malaligned': "rgba(255, 20, 147, 0.5)",      // Deep pink
     'Mandibular Canal': "rgba(0, 0, 255, 0.5)",   // Blue
     'Missing teeth': "rgba(211, 211, 211, 0.5)",  // Light gray
-    'Periapical lesion': "rgba(138, 43, 226, 0.5)", // Blue violet
-    'Retained root': "rgba(205, 92, 92, 0.5)",    // Indian red
+    'Periapical lesion': "rgba(138, 43, 226, .8)", // Blue violet
     'Root Canal Treatment': "rgba(75, 0, 130, 0.5)", // Indigo
+    'Retained root': "rgba(205, 92, 92, 0.5)",    // Indian red
     'Root Piece': "rgba(233, 150, 122, 0.5)",     // Dark salmon
     'impacted tooth': "rgba(255, 165, 0, 0.5)",   // Orange
     'maxillary sinus': "rgba(65, 105, 225, 0.5)", // Royal blue
@@ -336,7 +342,65 @@ const FileUpload = () => {
     return null;
   };
 
-  const findShapeAtPoint = (x: number, y: number) => {
+  const isPointInPolygon = (x: number, y: number, points: number[] | number[][]) => {
+    let vertices: number[][] = [];
+    if (Array.isArray(points[0])) {
+      vertices = points as number[][];
+    } else {
+      vertices = [];
+      for (let i = 0; i < points.length; i += 2) {
+        vertices.push([points[i], points[i + 1]]);
+      }
+    }
+
+    let inside = false;
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+      const xi = vertices[i][0];
+      const yi = vertices[i][1];
+      const xj = vertices[j][0];
+      const yj = vertices[j][1];
+
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  };
+
+  const findShapeAtPoint = (x: number, y: number, scaleX: number, scaleY: number) => {
+    // Check annotations
+    for (const annotation of annotations) {
+      for (const coord of annotation.roi_xyxy) {
+        if (!coord.visible) continue;
+
+        if (checkType === "path" && coord.poly && coord.poly.length > 0) {
+          const scaledPoly = coord.poly.map(([px, py]) => [px * scaleX, py * scaleY]);
+          if (isPointInPolygon(x, y, scaledPoly)) {
+            return {
+              type: "annotation",
+              className: annotation.class,
+              coordId: coord.id,
+            };
+          }
+        } else {
+          const [x1, y1, x2, y2] = coord.coordinates;
+          const scaledX1 = x1 * scaleX;
+          const scaledY1 = y1 * scaleY;
+          const scaledX2 = x2 * scaleX;
+          const scaledY2 = y2 * scaleY;
+
+          if (x >= scaledX1 && x <= scaledX2 && y >= scaledY1 && y <= scaledY2) {
+            return {
+              type: "annotation",
+              className: annotation.class,
+              coordId: coord.id,
+            };
+          }
+        }
+      }
+    }
+
+    // Check drawings
     for (const drawing of drawings) {
       if (!drawing.visible) continue;
 
@@ -344,7 +408,10 @@ const FileUpload = () => {
         case "rectangle": {
           const [x1, y1, x2, y2] = drawing.points;
           if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
-            return drawing.id;
+            return {
+              type: "drawing",
+              drawingId: drawing.id,
+            };
           }
           break;
         }
@@ -352,13 +419,19 @@ const FileUpload = () => {
           const [x1, y1, x2, y2] = drawing.points;
           const distance = pointToLineDistance(x, y, x1, y1, x2, y2);
           if (distance < 10) {
-            return drawing.id;
+            return {
+              type: "drawing",
+              drawingId: drawing.id,
+            };
           }
           break;
         }
         case "polygon": {
           if (isPointInPolygon(x, y, drawing.points)) {
-            return drawing.id;
+            return {
+              type: "drawing",
+              drawingId: drawing.id,
+            };
           }
           break;
         }
@@ -366,7 +439,10 @@ const FileUpload = () => {
           const [px, py] = drawing.points;
           const distance = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
           if (distance < 10) {
-            return drawing.id;
+            return {
+              type: "drawing",
+              drawingId: drawing.id,
+            };
           }
           break;
         }
@@ -409,22 +485,6 @@ const FileUpload = () => {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  const isPointInPolygon = (x: number, y: number, points: number[]) => {
-    let inside = false;
-    for (let i = 0, j = points.length - 2; i < points.length; i += 2) {
-      const xi = points[i];
-      const yi = points[i + 1];
-      const xj = points[j];
-      const yj = points[j + 1];
-
-      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
-        inside = !inside;
-      }
-      j = i;
-    }
-    return inside;
-  };
-
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isAnnotationEnabled || (currentTool === "select" && !isTransforming)) return;
 
@@ -437,7 +497,7 @@ const FileUpload = () => {
     const { x, y } = point;
 
     if (currentTool === "move") {
-      const shapeId = findShapeAtPoint(x, y);
+      const shapeId = findShapeAtPoint(x, y, 1, 1)?.drawingId;
       if (shapeId) {
         setIsTransforming(true);
         setSelectedShape(shapeId);
@@ -524,8 +584,7 @@ const FileUpload = () => {
     const points = drawing.points;
     switch (drawing.type) {
       case "rectangle":
-        const [x1, y1, x2, y2] = points;
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.strokeRect(points[0], points[1], points[2] - points[0], points[3] - points[1]);
         break;
       case "line":
         ctx.moveTo(points[0], points[1]);
@@ -546,7 +605,7 @@ const FileUpload = () => {
         break;
     }
 
-    if (drawing.label) {
+    if (drawing.label && hoveredItem?.type === "drawing" && hoveredItem.drawingId === drawing.id) {
       ctx.font = "14px Arial";
       const textMetrics = ctx.measureText(drawing.label);
       ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
@@ -568,6 +627,18 @@ const FileUpload = () => {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const imageElement = containerRef.current?.querySelector("img");
+    if (!imageElement) return;
+
+    const displayedWidth = imageElement.clientWidth;
+    const displayedHeight = imageElement.clientHeight;
+    const scaleX = displayedWidth / imageSize.width;
+    const scaleY = displayedHeight / imageSize.height;
+
+    // Update hovered item
+    const hovered = findShapeAtPoint(x, y, scaleX, scaleY);
+    setHoveredItem(hovered);
 
     if (isTransforming && selectedShape && currentTool === "move") {
       const drawing = drawings.find((d) => d.id === selectedShape);
@@ -911,7 +982,7 @@ const FileUpload = () => {
       const annotation = classMap.get(className)!;
       annotation.roi_xyxy.push({
         coordinates: result.roi_xyxy[0],
-        poly: result.poly ? result.poly[0] : undefined, // Safely handle missing poly
+        poly: result.poly ? result.poly[0] : undefined,
         visible: true,
         id: `${className}-${index}`,
         label: (index + 1).toString(),
@@ -959,8 +1030,7 @@ const FileUpload = () => {
     annotations.forEach((annotation, annIndex) => {
       annotation.roi_xyxy.forEach((coord) => {
         if (!coord.visible) return;
-        console.log(coord,"this si the coord coming");
-        
+
         if (checkType === "path" && coord.poly && coord.poly.length > 0) {
           ctx.beginPath();
           const color = classColors[annotation.class] || "rgba(255, 0, 0, 0.5)";
@@ -982,25 +1052,32 @@ const FileUpload = () => {
           ctx.shadowBlur = 0;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
-          // Name labels adding in this part ( only for the annotations that coming from the backend , not drawings )
-          const label = `${coord.label} ${annotation.class}`.trim();
-          if (label) {
-            ctx.font = "14px Arial";
-            const textMetrics = ctx.measureText(label);
-            const textHeight = 20;
-            const labelX = coord.poly[0][0] * scaleX;
-            const labelY = coord.poly[0][1] * scaleY;
 
-            ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-            ctx.fillRect(
-              labelX,
-              labelY - textHeight,
-              textMetrics.width + 10,
-              textHeight
-            );
+          // Draw label only if hovered
+          if (
+            hoveredItem?.type === "annotation" &&
+            hoveredItem.className === annotation.class &&
+            hoveredItem.coordId === coord.id
+          ) {
+            const label = `${coord.label} ${annotation.class}`.trim();
+            if (label) {
+              ctx.font = "14px Arial";
+              const textMetrics = ctx.measureText(label);
+              const textHeight = 20;
+              const labelX = coord.poly[0][0] * scaleX;
+              const labelY = coord.poly[0][1] * scaleY;
 
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillText(label, labelX + 5, labelY - 5);
+              ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+              ctx.fillRect(
+                labelX,
+                labelY - textHeight,
+                textMetrics.width + 10,
+                textHeight
+              );
+
+              ctx.fillStyle = "#FFFFFF";
+              ctx.fillText(label, labelX + 5, labelY - 5);
+            }
           }
         } else {
           const [x1, y1, x2, y2] = coord.coordinates;
@@ -1019,91 +1096,36 @@ const FileUpload = () => {
             scaledY2 - scaledY1
           );
 
-          const label = `${coord.label} ${annotation.class}`.trim();
-          if (label) {
-            ctx.font = "14px Arial";
-            const textMetrics = ctx.measureText(label);
-            const textHeight = 20;
+          // Draw label only if hovered
+          if (
+            hoveredItem?.type === "annotation" &&
+            hoveredItem.className === annotation.class &&
+            hoveredItem.coordId === coord.id
+          ) {
+            const label = `${coord.label} ${annotation.class}`.trim();
+            if (label) {
+              ctx.font = "14px Arial";
+              const textMetrics = ctx.measureText(label);
+              const textHeight = 20;
 
-            ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-            ctx.fillRect(
-              scaledX1,
-              scaledY1 - textHeight,
-              textMetrics.width + 10,
-              textHeight
-            );
+              ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+              ctx.fillRect(
+                scaledX1,
+                scaledY1 - textHeight,
+                textMetrics.width + 10,
+                textHeight
+              );
 
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+              ctx.fillStyle = "#FFFFFF";
+              ctx.fillText(label, scaledX1 + 5, scaledY1 - 5);
+            }
           }
         }
       });
     });
 
-    drawings.forEach((drawing) => {
-      if (!drawing.visible) return;
-
-      ctx.beginPath();
-      ctx.strokeStyle = "#00FF00";
-      ctx.lineWidth = 2;
-
-      switch (drawing.type) {
-        case "rectangle":
-          ctx.strokeRect(
-            drawing.points[0],
-            drawing.points[1],
-            drawing.points[2] - drawing.points[0],
-            drawing.points[3] - drawing.points[1]
-          );
-          break;
-
-        case "line":
-          ctx.moveTo(drawing.points[0], drawing.points[1]);
-          ctx.lineTo(drawing.points[2], drawing.points[3]);
-          ctx.stroke();
-          break;
-
-        case "polygon":
-          if (drawing.points.length >= 4) {
-            ctx.moveTo(drawing.points[0], drawing.points[1]);
-            for (let i = 2; i < drawing.points.length; i += 2) {
-              ctx.lineTo(drawing.points[i], drawing.points[i + 1]);
-            }
-            ctx.closePath();
-            ctx.stroke();
-          }
-          break;
-
-        case "point":
-          ctx.arc(drawing.points[0], drawing.points[1], 3, 0, Math.PI * 2);
-          ctx.fill();
-          break;
-      }
-
-      if (drawing.label && drawing.label.trim()) {
-        ctx.font = "14px Arial";
-        const textMetrics = ctx.measureText(drawing.label);
-        const textHeight = 20;
-
-        ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
-        ctx.fillRect(
-          drawing.points[0],
-          drawing.points[1] - textHeight,
-          textMetrics.width + 10,
-          textHeight
-        );
-
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillText(
-          drawing.label.trim(),
-          drawing.points[0] + 5,
-          drawing.points[1] - 5
-        );
-      }
-    });
-  }, [annotations, isAnnotationEnabled, imageSize, drawings, checkType]);
-
-  
+    drawings.forEach((drawing) => drawShape(ctx, drawing));
+  }, [annotations, isAnnotationEnabled, imageSize, drawings, checkType, hoveredItem]);
 
   useEffect(() => {
     drawAnnotations();
@@ -1585,7 +1607,11 @@ const FileUpload = () => {
                       onMouseDown={startDrawing}
                       onMouseMove={draw}
                       onMouseUp={endDrawing}
-                      onMouseLeave={() => setIsDrawing(false)}
+                      onMouseLeave={() => {
+                        setIsDrawing(false);
+                        setHoveredItem(null);
+                        drawAnnotations();
+                      }}
                     />
                     {drawings.map((drawing) => renderTransformButton(drawing))}
                   </div>
