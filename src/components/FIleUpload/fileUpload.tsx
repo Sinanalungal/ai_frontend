@@ -157,7 +157,7 @@ const FileUpload = () => {
     "Other",
   ];
 
-  const classColors = {
+  const classColors:any = {
     'Caries': "rgba(255, 0, 0, 0.5)",             // Red
     'Crown': "rgba(255, 215, 0, 0.5)",            // Gold
     'Filling': "rgba(0, 128, 255, 0.5)",          // Blue
@@ -342,7 +342,7 @@ const FileUpload = () => {
     return null;
   };
 
-  const isPointInPolygon = (x: number, y: number, points: number[] | number[][]) => {
+  const isPointInPolygon = (x: number, y: number, points: any[] | number[][]) => {
     let vertices: number[][] = [];
     if (Array.isArray(points[0])) {
       vertices = points as number[][];
@@ -637,7 +637,7 @@ const FileUpload = () => {
     const scaleY = displayedHeight / imageSize.height;
 
     // Update hovered item
-    const hovered = findShapeAtPoint(x, y, scaleX, scaleY);
+    const hovered:any = findShapeAtPoint(x, y, scaleX, scaleY);
     setHoveredItem(hovered);
 
     if (isTransforming && selectedShape && currentTool === "move") {
