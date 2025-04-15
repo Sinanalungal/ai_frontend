@@ -151,10 +151,38 @@ const FileUpload = () => {
     "Other",
   ];
 
-  const classColors: { [key: string]: string } = {
-    "impacted tooth": "rgba(255, 165, 0, 0.5)", // Orange
-    "Filling": "rgba(0, 128, 255, 0.5)", // Blue
-    // Add more class-color mappings as needed
+  const classColors = {
+    'Caries': "rgba(255, 0, 0, 0.5)",             // Red
+    'Crown': "rgba(255, 215, 0, 0.5)",            // Gold
+    'Filling': "rgba(0, 128, 255, 0.5)",          // Blue
+    'Implant': "rgba(192, 192, 192, 0.5)",        // Silver
+    'Malaligned': "rgba(255, 20, 147, 0.5)",      // Deep pink
+    'Mandibular Canal': "rgba(0, 0, 255, 0.5)",   // Blue
+    'Missing teeth': "rgba(211, 211, 211, 0.5)",  // Light gray
+    'Periapical lesion': "rgba(138, 43, 226, 0.5)", // Blue violet
+    'Retained root': "rgba(205, 92, 92, 0.5)",    // Indian red
+    'Root Canal Treatment': "rgba(75, 0, 130, 0.5)", // Indigo
+    'Root Piece': "rgba(233, 150, 122, 0.5)",     // Dark salmon
+    'impacted tooth': "rgba(255, 165, 0, 0.5)",   // Orange
+    'maxillary sinus': "rgba(65, 105, 225, 0.5)", // Royal blue
+    'Bone Loss': "rgba(139, 69, 19, 0.5)",        // Saddle brown
+    'Fracture teeth': "rgba(255, 69, 0, 0.5)",    // Red-orange
+    'Permanent Teeth': "rgba(46, 139, 87, 0.5)",  // Sea green
+    'Supra Eruption': "rgba(34, 139, 34, 0.5)",   // Forest green
+    'TAD': "rgba(219, 112, 147, 0.5)",            // Pale violet red
+    'abutment': "rgba(218, 165, 32, 0.5)",        // Goldenrod
+    'attrition': "rgba(210, 105, 30, 0.5)",       // Chocolate
+    'bone defect': "rgba(160, 82, 45, 0.5)",      // Sienna
+    'gingival former': "rgba(112, 128, 144, 0.5)", // Slate gray
+    'metal band': "rgba(119, 136, 153, 0.5)",     // Slate gray
+    'orthodontic brackets': "rgba(255, 182, 193, 0.5)", // Light pink
+    'permanent retainer': "rgba(255, 105, 180, 0.5)", // Hot pink
+    'post - core': "rgba(184, 134, 11, 0.5)",     // Dark goldenrod
+    'plating': "rgba(128, 128, 128, 0.5)",        // Gray
+    'wire': "rgba(169, 169, 169, 0.5)",           // Dark gray
+    'Cyst': "rgba(148, 0, 211, 0.5)",             // Violet
+    'Root resorption': "rgba(186, 85, 211, 0.5)", // Medium orchid
+    'Primary teeth': "rgba(60, 179, 113, 0.5)"    // Medium sea green
   };
 
   const getScaledPoint = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -931,7 +959,8 @@ const FileUpload = () => {
     annotations.forEach((annotation, annIndex) => {
       annotation.roi_xyxy.forEach((coord) => {
         if (!coord.visible) return;
-
+        console.log(coord,"this si the coord coming");
+        
         if (checkType === "path" && coord.poly && coord.poly.length > 0) {
           ctx.beginPath();
           const color = classColors[annotation.class] || "rgba(255, 0, 0, 0.5)";
@@ -953,7 +982,7 @@ const FileUpload = () => {
           ctx.shadowBlur = 0;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
-
+          // Name labels adding in this part ( only for the annotations that coming from the backend , not drawings )
           const label = `${coord.label} ${annotation.class}`.trim();
           if (label) {
             ctx.font = "14px Arial";
@@ -1073,6 +1102,8 @@ const FileUpload = () => {
       }
     });
   }, [annotations, isAnnotationEnabled, imageSize, drawings, checkType]);
+
+  
 
   useEffect(() => {
     drawAnnotations();
